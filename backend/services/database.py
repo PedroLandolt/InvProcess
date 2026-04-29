@@ -1,10 +1,9 @@
 import sqlite3
 import json
 import os
-from passlib.context import CryptContext
+import bcrypt
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "db", "invoices.db")
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_db():
@@ -185,7 +184,7 @@ def seed_users():
     for u in users:
         conn.execute(
             "INSERT INTO users (name, email, password_hash, role, initials, status) VALUES (?, ?, ?, ?, ?, ?)",
-            (u["name"], u["email"], _pwd_context.hash(u["role"]), u["role"], u["initials"], u.get("status", "active")),
+            (u["name"], u["email"], bcrypt.hashpw(u["role"].encode(), bcrypt.gensalt()).decode(), u["role"], u["initials"], u.get("status", "active")),
         )
     conn.commit()
     conn.close()
