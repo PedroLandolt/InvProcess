@@ -12,7 +12,7 @@ import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter>
       <AuthProvider>
         <Routes>
           {/* Auth pages — redirect to home if already logged in */}
