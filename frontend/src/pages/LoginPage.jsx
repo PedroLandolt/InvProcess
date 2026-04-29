@@ -79,20 +79,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-8 pt-5 border-t border-border-light">
-            <p className="text-xs text-text-muted mb-2">Demo accounts:</p>
-            <div className="flex flex-col gap-1.5">
-              <div className="text-xs text-text-secondary">
-                <span className="font-medium text-text-primary">Analyst:</span> analyst@portline.com / analyst
-              </div>
-              <div className="text-xs text-text-secondary">
-                <span className="font-medium text-text-primary">Manager:</span> manager@portline.com / manager
-              </div>
-              <div className="text-xs text-text-secondary">
-                <span className="font-medium text-text-primary">Admin:</span> admin@portline.com / admin
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

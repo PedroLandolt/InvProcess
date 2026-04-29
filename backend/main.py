@@ -18,12 +18,17 @@ from routers import invoices, companies, upload, auth, team
 app = FastAPI(title="Portline Invoice Processor", version="0.1.0")
 
 _origins = os.getenv("ALLOWED_ORIGINS", "*")
-allowed_origins = [o.strip() for o in _origins.split(",")] if _origins != "*" else ["*"]
+if _origins == "*":
+    allowed_origins = ["*"]
+    credentials = False
+else:
+    allowed_origins = [o.strip() for o in _origins.split(",")]
+    credentials = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

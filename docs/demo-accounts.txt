@@ -1,0 +1,10 @@
+Demo Accounts
+=============
+
+| Role    | Email                  | Password |
+|---------|------------------------|----------|
+| Admin   | admin@portline.com     | admin    |
+| Manager | manager@portline.com   | manager  |
+| Analyst | analyst@portline.com   | analyst  |
+| Analyst | ana.torres@portline.com | analyst |
+| Analyst | peter.s@portline.com   | analyst  (inactive) |
