@@ -3,11 +3,23 @@ import { useAuth } from '../context/AuthContext'
 import PageHeader from '../components/PageHeader'
 import { uploadInvoice } from '../services/api'
 
+function loadUploadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('portline_uploads') || '[]')
+  } catch { return [] }
+}
+
+function saveUploadHistory(uploads) {
+  try {
+    localStorage.setItem('portline_uploads', JSON.stringify(uploads.slice(0, 50)))
+  } catch {}
+}
+
 export default function UploadPage() {
   const { user } = useAuth()
   const [pending, setPending] = useState([])
   const [dragOver, setDragOver] = useState(false)
-  const [uploads, setUploads] = useState([])
+  const [uploads, setUploads] = useState(loadUploadHistory)
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef()
 
@@ -34,29 +46,41 @@ export default function UploadPage() {
     if (pending.length === 0) return
     setUploading(true)
     const now = new Date().toLocaleString()
-    for (const item of pending) {
+    const toProcess = [...pending]
+    setPending(prev => prev.map(p => ({ ...p, processing: true })))
+
+    for (const item of toProcess) {
       try {
         const result = await uploadInvoice(item.file)
-        setUploads(prev => [{
-          id: item.id,
-          fileName: item.file.name,
-          size: item.file.size,
-          uploadedBy: user?.name || 'Unknown',
-          uploadedAt: now,
-          status: result.success ? 'processed' : 'failed',
-        }, ...prev])
+        setPending(prev => prev.filter(p => p.id !== item.id))
+        setUploads(prev => {
+          const updated = [{
+            id: item.id,
+            fileName: item.file.name,
+            size: item.file.size,
+            uploadedBy: user?.name || 'Unknown',
+            uploadedAt: now,
+            status: result.success ? 'processed' : 'failed',
+          }, ...prev]
+          saveUploadHistory(updated)
+          return updated
+        })
       } catch {
-        setUploads(prev => [{
-          id: item.id,
-          fileName: item.file.name,
-          size: item.file.size,
-          uploadedBy: user?.name || 'Unknown',
-          uploadedAt: now,
-          status: 'failed',
-        }, ...prev])
+        setPending(prev => prev.filter(p => p.id !== item.id))
+        setUploads(prev => {
+          const updated = [{
+            id: item.id,
+            fileName: item.file.name,
+            size: item.file.size,
+            uploadedBy: user?.name || 'Unknown',
+            uploadedAt: now,
+            status: 'failed',
+          }, ...prev]
+          saveUploadHistory(updated)
+          return updated
+        })
       }
     }
-    setPending([])
     setUploading(false)
   }
 
@@ -112,22 +136,28 @@ export default function UploadPage() {
               <div className="flex flex-col gap-1.5">
                 {pending.map(item => (
                   <div key={item.id} className="bg-white border border-border rounded-md p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-signal-light rounded flex items-center justify-center shrink-0">
-                      <span className="text-signal text-[10px] font-bold">PDF</span>
+                    <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${item.processing ? 'bg-accent-light' : 'bg-signal-light'}`}>
+                      {item.processing ? (
+                        <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span className="text-signal text-[10px] font-bold">PDF</span>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-text-primary truncate">{item.file.name}</div>
                       <div className="text-[11px] text-text-muted">{(item.file.size / 1024).toFixed(1)} KB</div>
                     </div>
-                    <button
-                      onClick={() => removePending(item.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#f5f5f5] cursor-pointer text-text-muted hover:text-text-primary transition-colors shrink-0"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
+                    {!item.processing && (
+                      <button
+                        onClick={() => removePending(item.id)}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#f5f5f5] cursor-pointer text-text-muted hover:text-text-primary transition-colors shrink-0"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -142,8 +172,12 @@ export default function UploadPage() {
               <div className="flex flex-col gap-1.5">
                 {uploads.map(u => (
                   <div key={u.id} className="bg-white border border-border rounded-md p-3 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-signal-light rounded flex items-center justify-center shrink-0">
-                      <span className="text-signal text-[10px] font-bold">PDF</span>
+                    <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${u.status === 'processed' ? 'bg-ok-light' : 'bg-signal-light'}`}>
+                      {u.status === 'processed' ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-text-primary truncate">{u.fileName}</div>

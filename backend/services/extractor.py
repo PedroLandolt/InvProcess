@@ -402,8 +402,6 @@ def extract_line_items(text: str, tables: list) -> list[dict]:
 
     return items
 
-    return items
-
 
 # ---------------------------------------------------------------------------
 # Main extraction entry point

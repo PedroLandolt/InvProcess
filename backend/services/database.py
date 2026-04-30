@@ -237,7 +237,7 @@ def update_user(user_id: int, updates: dict):
     conn = get_db()
     sets = []
     vals = []
-    for k in ("name", "status", "avatar"):
+    for k in ("name", "status", "avatar", "role"):
         if k in updates:
             sets.append(f"{k} = ?")
             vals.append(updates[k])

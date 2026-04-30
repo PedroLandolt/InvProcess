@@ -6,18 +6,11 @@ import RoleGate from '../components/RoleGate'
 import { fetchInvoices, submitToERP, API_BASE } from '../services/api'
 import { formatCurrency } from '../utils/format'
 
-const getDefaultDateRange = () => {
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - 29)
-  return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }
-}
-
 export default function OverviewPage() {
   const [invoices, setInvoices] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
-  const [filters, setFilters] = useState({ search: '', vendor: '', currency: '', dateRange: getDefaultDateRange() })
+  const [filters, setFilters] = useState({ search: '', vendor: '', currency: '', dateRange: null })
   const [showStats, setShowStats] = useState(false)
   const [viewingPdf, setViewingPdf] = useState(null)
 
@@ -48,7 +41,10 @@ export default function OverviewPage() {
       if (filters.search) {
         const s = filters.search.toLowerCase()
         const idMatch = String(inv.id).includes(s)
-        if (!idMatch && !inv.vendorName.toLowerCase().includes(s) && !inv.invoiceNumber.toLowerCase().includes(s)) return false
+        const vendorMatch = inv.vendorName?.toLowerCase().includes(s)
+        const invoiceMatch = inv.invoiceNumber?.toLowerCase().includes(s)
+        const taxIdMatch = inv.vendorTaxId?.toLowerCase().includes(s)
+        if (!idMatch && !vendorMatch && !invoiceMatch && !taxIdMatch) return false
       }
       if (filters.vendor && inv.vendorName !== filters.vendor) return false
       if (filters.currency && inv.currency !== filters.currency) return false
@@ -80,7 +76,7 @@ export default function OverviewPage() {
         onResetFilters={() => setStatusFilter('all')}
         resultCount={filtered.length}
       />
-      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 md:p-5 md:px-8 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 p-3 md:p-5 md:px-8 overflow-auto lg:overflow-hidden">
         {/* Left: Invoice list OR Detail overlay */}
         <div className="flex-1 min-w-0 flex flex-col">
           {selectedId && selected ? (
@@ -144,42 +140,43 @@ export default function OverviewPage() {
 
         {/* Right: Statistics — desktop only (mobile uses toggle above) */}
         <div className="hidden lg:block w-[300px] shrink-0">
-          <StatisticsPanel filteredInvoices={filtered} dateFilteredInvoices={dateFiltered} />
+          <StatisticsPanel filteredInvoices={dateFiltered} dateFilteredInvoices={dateFiltered} />
         </div>
       </div>
 
       {/* PDF Viewer Overlay */}
       {viewingPdf && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setViewingPdf(null)}>
-          <div className="bg-white rounded-md w-full max-w-4xl h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-md w-full max-w-md flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-light shrink-0">
-              <span className="text-sm font-semibold text-text-primary">PDF Preview</span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`${API_BASE}/api/invoices/${viewingPdf}/pdf?token=${localStorage.getItem('token')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-accent hover:text-[#e55a25] cursor-pointer"
-                >
-                  Open in new tab
-                </a>
-                <button
-                  onClick={() => setViewingPdf(null)}
-                  className="w-7 h-7 flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary transition-colors rounded hover:bg-[#f5f5f5]"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
+              <span className="text-sm font-semibold text-text-primary">Invoice PDF</span>
+              <button
+                onClick={() => setViewingPdf(null)}
+                className="w-7 h-7 flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary transition-colors rounded hover:bg-[#f5f5f5]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
-            <div className="flex-1 min-h-0">
-              <iframe
-                src={`${API_BASE}/api/invoices/${viewingPdf}/pdf?token=${localStorage.getItem('token')}`}
-                className="w-full h-full border-0"
-                title="Invoice PDF"
-              />
+            <div className="p-6 flex flex-col items-center gap-4">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              <p className="text-sm text-text-secondary">Click below to download or open the PDF</p>
+              <a
+                href={`${API_BASE}/api/invoices/${viewingPdf}/pdf?token=${localStorage.getItem('portline_token')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="bg-accent text-white px-6 py-2.5 rounded text-sm font-medium cursor-pointer hover:bg-[#e55a25] transition-colors"
+              >
+                Download PDF
+              </a>
             </div>
           </div>
         </div>
@@ -189,7 +186,11 @@ export default function OverviewPage() {
 }
 
 function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
-  const statusLabel = { ok: 'Ready for ERP submission', review: 'Needs manual review', error: 'Extraction failed' }
+  const statusLabel = {
+    ok: invoice.submittedToERP ? 'Approved & submitted' : 'Approved',
+    review: 'Needs manual review',
+    error: 'Extraction failed',
+  }
   const statusColor = { ok: 'text-ok', review: 'text-accent', error: 'text-signal' }
 
   return (
@@ -202,6 +203,12 @@ function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
             <div>
               <div className="text-base font-semibold text-text-primary">{invoice.vendorName}</div>
               <div className="text-sm text-text-secondary mt-1">Tax ID: {invoice.vendorTaxId || 'Not found'}</div>
+              {invoice.uploadedAt && (
+                <div className="text-xs text-text-muted mt-1">
+                  Uploaded {new Date(invoice.uploadedAt + 'Z').toLocaleString()}
+                  {invoice.uploadedBy && <> by <span className="font-medium text-text-secondary">{invoice.uploadedBy}</span></>}
+                </div>
+              )}
             </div>
             {invoice.erpMatched && (
               <div className="text-sm text-ok bg-ok-light px-3 py-1.5 rounded-sm font-medium self-start">✓ ERP Match</div>
@@ -279,7 +286,7 @@ function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
           <span className={`${statusColor[invoice.status]} font-semibold`}>● {invoice.status.toUpperCase()}</span>
           <span className="ml-1.5">— {statusLabel[invoice.status]}</span>
           {invoice.submittedToERP && invoice.submittedBy && (
-            <span className="ml-2 text-text-muted">| Submitted by {invoice.submittedBy}{invoice.submittedAt ? ` on ${new Date(invoice.submittedAt).toLocaleDateString()}` : ''}</span>
+            <span className="ml-2 text-text-muted">| Submitted by {invoice.submittedBy}{invoice.submittedAt ? ` on ${new Date(invoice.submittedAt + 'Z').toLocaleDateString()}` : ''}</span>
           )}
         </div>
         <div className="flex gap-2">
@@ -287,7 +294,7 @@ function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
             onClick={() => onViewPdf(invoice.id)}
             className="bg-white border border-[#ddd] text-[#666] px-3 py-1.5 rounded-sm text-sm cursor-pointer hover:bg-[#f5f5f5] transition-colors"
           >
-            View PDF
+            Download PDF
           </button>
           {!invoice.submittedToERP && (
             <RoleGate role="manager">

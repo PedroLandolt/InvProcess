@@ -95,6 +95,37 @@ def get_me(user: dict = Depends(get_current_user)):
     }
 
 
+class UpdateProfileRequest(BaseModel):
+    name: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
+
+
+@router.put("/me")
+def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_current_user)):
+    db_user = get_user_by_email(user["sub"])
+    if not db_user:
+        raise HTTPException(status_code=401, detail="User not found")
+    updates = {}
+    if body.name and body.name.strip():
+        updates["name"] = sanitize_string(body.name.strip())
+    if body.new_password:
+        if not body.current_password:
+            raise HTTPException(status_code=400, detail="Current password required")
+        if not verify_password(body.current_password, db_user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        if len(body.new_password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        updates["password_hash"] = hash_password(body.new_password)
+    if not updates:
+        raise HTTPException(status_code=400, detail="No changes to apply")
+    if "name" in updates:
+        update_user(db_user["id"], updates)
+    if "password_hash" in updates:
+        set_user_password(db_user["email"], updates["password_hash"])
+    return {"success": True, "name": updates.get("name", db_user["name"])}
+
+
 @router.post("/set-password")
 def set_password(body: SetPasswordRequest):
     email = verify_reset_token(body.token)

@@ -94,14 +94,11 @@ export default function StatisticsPanel({ filteredInvoices, dateFilteredInvoices
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 flex gap-0.5 h-[3px]">
-                  {v.total > 0 && (
-                    <>
-                      <div className="bg-ok rounded-[1px]" style={{ width: `${(v.ok / v.total) * 100}%` }} />
-                      <div className="bg-accent rounded-[1px]" style={{ width: `${(v.review / v.total) * 100}%` }} />
-                      <div className="bg-signal rounded-[1px]" style={{ width: `${(v.error / v.total) * 100}%` }} />
-                    </>
-                  )}
+                <div className="flex-1 h-[3px] bg-[#eee] rounded-[1px]">
+                  <div
+                    className={`h-full rounded-[1px] ${v.okPct >= 80 ? 'bg-ok' : v.okPct >= 50 ? 'bg-accent' : v.okPct > 0 ? 'bg-signal' : ''}`}
+                    style={{ width: `${v.okPct}%` }}
+                  />
                 </div>
                 <span className="text-[10px] text-text-muted shrink-0">{v.total}</span>
               </div>

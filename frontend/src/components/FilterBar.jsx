@@ -1,27 +1,53 @@
 import { useState } from 'react'
 import DateFilter from './DateFilter'
 
+function dateRangeToISO(range) {
+  return range ? `${range.start}_${range.end}` : 'all'
+}
+
+function isoToDateRange(s) {
+  if (!s || s === 'all') return null
+  const [start, end] = s.split('_')
+  if (!start || !end) return null
+  return { start, end }
+}
+
+function getDefaultDateRange() {
+  try {
+    const saved = localStorage.getItem('portline_dateRange')
+    if (saved) {
+      const range = isoToDateRange(saved)
+      if (range) return range
+    }
+  } catch {}
+  const prefs = JSON.parse(localStorage.getItem('portline_prefs') || '{}')
+  const preset = prefs.dateRange || 'last30'
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]
+  const d = (n) => { const x = new Date(now); x.setDate(x.getDate() + n); return x.toISOString().split('T')[0] }
+  if (preset === 'all') return null
+  if (preset === 'last7') return { start: d(-6), end: today }
+  if (preset === 'thisMonth') return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, end: today }
+  return { start: d(-29), end: today }
+}
+
 export default function FilterBar({ vendors, currencies, onFilterChange, onResetFilters, resultCount }) {
   const [search, setSearch] = useState('')
   const [vendor, setVendor] = useState('')
   const [currency, setCurrency] = useState('')
-  const getDefaultDateRange = () => {
-    const end = new Date()
-    const start = new Date()
-    start.setDate(start.getDate() - 29)
-    return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] }
-  }
-
   const [dateRange, setDateRange] = useState(getDefaultDateRange)
 
-  const hasFilters = search || vendor || currency || dateRange
+  const hasFilters = (search || vendor || currency) && vendors?.length > 0
 
   const handleChange = (field, value) => {
     const updates = { search, vendor, currency, dateRange, [field]: value }
     if (field === 'search') setSearch(value)
     if (field === 'vendor') setVendor(value)
     if (field === 'currency') setCurrency(value)
-    if (field === 'dateRange') setDateRange(value)
+    if (field === 'dateRange') {
+      setDateRange(value)
+      try { localStorage.setItem('portline_dateRange', dateRangeToISO(value)) } catch {}
+    }
     onFilterChange({
       search: updates.search,
       vendor: updates.vendor,
@@ -36,6 +62,7 @@ export default function FilterBar({ vendors, currencies, onFilterChange, onReset
     setVendor('')
     setCurrency('')
     setDateRange(defaultRange)
+    try { localStorage.setItem('portline_dateRange', dateRangeToISO(defaultRange)) } catch {}
     onFilterChange({ search: '', vendor: '', currency: '', dateRange: defaultRange })
     onResetFilters?.()
   }

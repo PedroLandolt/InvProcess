@@ -8,7 +8,18 @@ export function getHeaders() {
 }
 
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers: { ...getHeaders(), ...opts.headers } })
+  const { headers: customHeaders, ...rest } = opts
+  const headers = { ...getHeaders(), ...customHeaders }
+  if (!(opts.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...rest, headers })
+  if (res.status === 401 || res.status === 422) {
+    localStorage.removeItem('portline_token')
+    localStorage.removeItem('portline_user')
+    window.location.href = '/login'
+    throw new Error('Session expired')
+  }
   return res
 }
 

@@ -180,6 +180,15 @@ def compute_status(extracted: dict, match_result: dict) -> dict:
     matched = match_result.get("matchedCompany")
     if matched and not extracted.get("vendorTaxId"):
         extracted["vendorTaxId"] = matched.get("taxId")
+        warnings = [w for w in warnings if w != "No tax ID extracted"]
+        if matched.get("taxId"):
+            warnings.append(f"Tax ID backfilled from ERP match: {matched['taxId']}")
+
+    # No line items → Needs Review regardless of other fields
+    if not extracted.get("lineItems") and status == "OK":
+        status = "Needs Review"
+        if "No line items extracted" not in warnings:
+            warnings.append("No line items extracted")
 
     all_notes = errors + warnings
     if not all_notes:

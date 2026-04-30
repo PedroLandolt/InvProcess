@@ -115,6 +115,16 @@ export default function Sidebar({ open, onClose }) {
           open ? 'flex translate-x-0' : 'flex -translate-x-full'
         }`}
       >
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-3 w-8 h-8 flex items-center justify-center rounded-md hover:bg-sidebar-hover cursor-pointer md:hidden"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
         {sidebarContent}
       </aside>
     </>

@@ -64,7 +64,7 @@ export default function SettingsPage() {
     } catch {}
   }
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault()
     setProfileError('')
     setProfileSaved(false)
@@ -74,7 +74,6 @@ export default function SettingsPage() {
       return
     }
 
-    // If changing password, validate fully
     if (changingPassword) {
       if (!currentPassword) {
         setProfileError('Enter your current password to set a new one')
@@ -89,10 +88,29 @@ export default function SettingsPage() {
         setProfileError('Passwords do not match')
         return
       }
-      // Mock: accept any current password for now (backend will verify later)
     }
 
-    updateProfile({ name: editName.trim() })
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        method: 'PUT',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          ...(changingPassword ? { current_password: currentPassword, new_password: editPassword } : {}),
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setProfileError(data.detail || 'Failed to update profile')
+        return
+      }
+      const data = await res.json()
+      updateProfile({ name: data.name })
+    } catch {
+      setProfileError('Network error')
+      return
+    }
+
     setCurrentPassword('')
     setEditPassword('')
     setEditPasswordConfirm('')

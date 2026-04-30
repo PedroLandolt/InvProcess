@@ -22,7 +22,7 @@ export default function Layout() {
 
         <Sidebar open={open} onClose={() => setOpen(false)} />
 
-        <main className="flex-1 flex flex-col bg-surface overflow-hidden min-w-0">
+        <main className="flex-1 flex flex-col bg-surface min-w-0">
           {/* Mobile header */}
           <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border-light bg-white shrink-0">
             <button

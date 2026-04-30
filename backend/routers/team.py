@@ -85,6 +85,7 @@ def create_team_member(body: CreateAnalystRequest, user: dict = Depends(require_
 class UpdateMemberRequest(BaseModel):
     name: str | None = None
     status: str | None = None
+    role: str | None = None
 
     @field_validator("status")
     @classmethod
@@ -93,9 +94,28 @@ class UpdateMemberRequest(BaseModel):
             raise ValueError("Status must be 'active' or 'inactive'")
         return v
 
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v):
+        if v and v not in ("admin", "manager", "analyst"):
+            raise ValueError("Role must be 'admin', 'manager', or 'analyst'")
+        return v
+
 
 @router.patch("/{user_id}")
 def update_team_member(user_id: int, body: UpdateMemberRequest, user: dict = Depends(require_role("manager"))):
+    from services.database import get_all_users
+    target = next((u for u in get_all_users() if u["id"] == user_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    actor_role = user["role"]
+    target_role = target["role"]
+    if actor_role == "manager" and target_role in ("admin", "manager"):
+        raise HTTPException(status_code=403, detail="Managers cannot edit admins or other managers")
+    if actor_role == "manager" and body.role:
+        raise HTTPException(status_code=403, detail="Managers cannot change roles")
+    if body.role == "admin" and actor_role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can assign the admin role")
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
