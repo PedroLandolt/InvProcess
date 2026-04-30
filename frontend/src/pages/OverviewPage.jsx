@@ -6,6 +6,27 @@ import RoleGate from '../components/RoleGate'
 import { fetchInvoices, submitToERP, API_BASE } from '../services/api'
 import { formatCurrency } from '../utils/format'
 
+function buildAvatarUrlForUser(userId) {
+  if (!userId) return null
+  const token = localStorage.getItem('portline_token')
+  return `${API_BASE}/api/auth/avatar/${userId}?token=${token}`
+}
+
+function UploaderAvatar({ userId, name }) {
+  const [imgError, setImgError] = useState(false)
+  const avatarUrl = userId ? buildAvatarUrlForUser(userId) : null
+  const initials = name ? name.split(' ').map(n => n[0]).join('') : '?'
+
+  if (avatarUrl && !imgError) {
+    return <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" onError={() => setImgError(true)} />
+  }
+  return (
+    <div className="w-5 h-5 bg-[#555] rounded-full flex items-center justify-center text-[9px] text-[#bbb] font-semibold shrink-0">
+      {initials}
+    </div>
+  )
+}
+
 export default function OverviewPage() {
   const [invoices, setInvoices] = useState([])
   const [selectedId, setSelectedId] = useState(null)
@@ -208,11 +229,7 @@ function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
               <div className="text-sm text-text-secondary mt-1">Tax ID: {invoice.vendorTaxId || 'Not found'}</div>
               {invoice.uploadedAt && (
                 <div className="flex items-center gap-1.5 text-xs text-text-muted mt-1">
-                  {invoice.uploadedBy && (
-                    <div className="w-5 h-5 bg-[#555] rounded-full flex items-center justify-center text-[9px] text-[#bbb] font-semibold shrink-0">
-                      {invoice.uploadedBy.split(' ').map(n => n[0]).join('')}
-                    </div>
-                  )}
+                  <UploaderAvatar userId={invoice.uploadedById} name={invoice.uploadedBy} />
                   <span>
                     Uploaded {new Date(invoice.uploadedAt.replace(' ', 'T') + 'Z').toLocaleString()}
                     {invoice.uploadedBy && <> by <span className="font-medium text-text-secondary">{invoice.uploadedBy}</span></>}

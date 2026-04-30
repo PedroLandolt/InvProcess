@@ -34,6 +34,7 @@ def init_db():
             submittedAt TEXT,
             uploadedAt TEXT DEFAULT (datetime('now')),
             uploadedBy TEXT,
+            uploadedById INTEGER,
             createdAt TEXT DEFAULT (datetime('now')),
             updatedAt TEXT DEFAULT (datetime('now'))
         );
@@ -66,7 +67,7 @@ def save_invoice(data: dict) -> int:
             """UPDATE invoices SET
                status=?, confidenceScore=?, matchQuality=?, processingNotes=?, extractedData=?,
                matchedCompany=?, matchScore=?, matchMethod=?, errors=?, warnings=?, erpSubmitted=?,
-               submittedBy=?, submittedAt=?, uploadedBy=?, updatedAt=datetime('now')
+               submittedBy=?, submittedAt=?, uploadedBy=?, uploadedById=?, updatedAt=datetime('now')
                WHERE id=?""",
             (
                 data["status"],
@@ -83,6 +84,7 @@ def save_invoice(data: dict) -> int:
                 "System" if erp_ok else None,
                 now_str if erp_ok else None,
                 data.get("uploadedBy"),
+                data.get("uploadedById"),
                 existing["id"],
             ),
         )
@@ -93,8 +95,8 @@ def save_invoice(data: dict) -> int:
         """INSERT INTO invoices
            (fileName, status, confidenceScore, matchQuality, processingNotes, extractedData,
             matchedCompany, matchScore, matchMethod, errors, warnings, erpSubmitted,
-            submittedBy, submittedAt, uploadedBy, uploadedAt, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))""",
+            submittedBy, submittedAt, uploadedBy, uploadedById, uploadedAt, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))""",
         (
             data["fileName"],
             data["status"],
@@ -111,6 +113,7 @@ def save_invoice(data: dict) -> int:
             "System" if erp_ok else None,
             now_str if erp_ok else None,
             data.get("uploadedBy"),
+            data.get("uploadedById"),
         ),
     )
     conn.commit()

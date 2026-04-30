@@ -58,6 +58,7 @@ async def upload_pdfs(files: list[UploadFile] = File(...), user: dict = Depends(
                 "matchQuality": result["matchQuality"],
                 "processingNotes": result["processingNotes"],
                 "uploadedBy": user.get("name"),
+                "uploadedById": user.get("id"),
                 "extractedData": {
                     "invoiceNumber": extracted.get("invoiceNumber"),
                     "vendorName": extracted.get("vendorName"),

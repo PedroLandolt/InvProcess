@@ -48,6 +48,7 @@ def transform_invoice(row: dict) -> dict:
         "submittedAt": row.get("submittedAt"),
         "uploadedAt": row.get("uploadedAt") or row.get("createdAt"),
         "uploadedBy": row.get("uploadedBy"),
+        "uploadedById": row.get("uploadedById"),
     }
 
 
