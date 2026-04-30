@@ -52,6 +52,7 @@ def list_team(user: dict = Depends(get_current_user)):
             "initials": u.get("initials", ""),
             "status": u.get("status", "active"),
             "lastLogin": last_login,
+            "hasAvatar": bool(u.get("avatar")),
         })
     return result
 

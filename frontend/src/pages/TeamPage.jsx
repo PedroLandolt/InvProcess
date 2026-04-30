@@ -10,6 +10,22 @@ const ROLE_COLORS = {
   analyst: 'bg-[#f1f8f4] text-ok',
 }
 
+function TeamAvatar({ member }) {
+  const [imgError, setImgError] = useState(false)
+  const initials = member.initials || member.name.split(' ').map(n => n[0]).join('')
+  const token = localStorage.getItem('portline_token')
+  const avatarUrl = member.hasAvatar ? `${API_BASE}/api/auth/avatar/${member.id}?token=${token}` : null
+
+  if (avatarUrl && !imgError) {
+    return <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" onError={() => setImgError(true)} />
+  }
+  return (
+    <div className="w-8 h-8 bg-[#555] rounded-full flex items-center justify-center text-xs text-[#bbb] font-semibold">
+      {initials}
+    </div>
+  )
+}
+
 function MemberModal({ member, onSave, onClose, currentUserRole }) {
   const isEdit = !!member?.id
   const isAdmin = currentUserRole === 'admin'
@@ -231,9 +247,7 @@ export default function TeamPage() {
                   <tr key={member.id} className="border-b border-[#f5f5f5] hover:bg-[#fafafa]">
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#555] rounded-full flex items-center justify-center text-xs text-[#bbb] font-semibold">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </div>
+                        <TeamAvatar member={member} />
                         <span className="text-sm font-semibold text-text-primary">{member.name}</span>
                       </div>
                     </td>
@@ -278,9 +292,7 @@ export default function TeamPage() {
             return (
               <div key={member.id} className="bg-white border border-border rounded-md p-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-8 h-8 bg-[#555] rounded-full flex items-center justify-center text-xs text-[#bbb] font-semibold">
-                    {member.name.split(' ').map(n => n[0]).join('')}
-                  </div>
+                  <TeamAvatar member={member} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-text-primary">{member.name}</div>
                     <div className="text-xs text-text-secondary truncate">#{member.id} · {member.email}</div>

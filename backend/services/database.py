@@ -202,7 +202,7 @@ def get_user_by_email(email: str) -> dict | None:
 
 def get_all_users() -> list[dict]:
     conn = get_db()
-    rows = conn.execute("SELECT id, name, email, role, initials, status, last_login, created_at FROM users ORDER BY name").fetchall()
+    rows = conn.execute("SELECT id, name, email, role, initials, status, last_login, created_at, avatar FROM users ORDER BY name").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
