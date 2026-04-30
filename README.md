@@ -56,6 +56,8 @@ npm run dev               # Starts on :5173, proxies /api to :8000
 | Admin | admin@portline.com | admin |
 | Manager | manager@portline.com | manager |
 | Analyst | analyst@portline.com | analyst |
+| Analyst | ana.torres@portline.com | analyst |
+| Analyst (inactive) | peter.s@portline.com | analyst |
 
 ## Environment Variables
 
@@ -63,18 +65,24 @@ npm run dev               # Starts on :5173, proxies /api to :8000
 |----------|-------------|
 | `ERP_API_KEY` | API key for the external ERP system |
 | `ERP_BASE_URL` | ERP API base URL |
+| `JWT_SECRET` | Secret key for JWT signing (default: demo key) |
 | `ALLOWED_ORIGINS` | CORS origins (comma-separated, default: `*`) |
 | `VITE_API_URL` | Backend URL for production frontend |
 
 ## Deployment
 
-### Frontend (GitHub Pages)
+### Frontend (Cloudflare Pages)
 
-Pushes to `main` auto-deploy via GitHub Actions. Set `VITE_API_URL` secret to your backend URL.
+Connect the repo, set build directory to `InvProcess/frontend`, build command `npm run build`, output directory `dist`. Set `VITE_API_URL` env var to your backend URL.
 
-### Backend (Railway/Render)
+### Backend (Render)
 
-Connect the repo, set root directory to `InvProcess/backend`, add environment variables.
+Connect the repo, set root directory to `InvProcess/backend`, add environment variables from the table above.
+
+## Documentation
+
+- `docs/approach-report.md` — Full approach report covering architecture, decisions, and trade-offs
+- `docs/demo-accounts.txt` — Demo login credentials
 
 ## Features
 
