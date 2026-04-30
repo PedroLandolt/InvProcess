@@ -3,6 +3,13 @@ import { useAuth } from '../context/AuthContext'
 import { getHeaders, API_BASE } from '../services/api'
 import PageHeader from '../components/PageHeader'
 
+function buildAvatarUrl(avatar) {
+  if (!avatar) return null
+  if (avatar.startsWith('http')) return avatar
+  const sep = avatar.includes('?') ? '&' : '?'
+  return `${API_BASE}${avatar}${sep}token=${localStorage.getItem('portline_token')}`
+}
+
 function getPrefs() {
   try {
     return JSON.parse(localStorage.getItem('portline_prefs')) || {}
@@ -13,29 +20,22 @@ function savePrefs(prefs) {
   localStorage.setItem('portline_prefs', JSON.stringify(prefs))
 }
 
-function validatePassword(pw) {
-  if (pw.length < 8) return 'Password must be at least 8 characters'
-  return null
-}
-
 export default function SettingsPage() {
   const { user, updateProfile } = useAuth()
-  const [prefs, setPrefs] = useState(getPrefs)
   const avatarRef = useRef()
 
   const [editName, setEditName] = useState(user?.name || '')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [editPassword, setEditPassword] = useState('')
-  const [editPasswordConfirm, setEditPasswordConfirm] = useState('')
+  const [prefs, setPrefs] = useState(getPrefs)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState('')
-  const [avatarPreview, setAvatarPreview] = useState(() => {
-    if (!user?.avatar) return null
-    const sep = user.avatar.includes('?') ? '&' : '?'
-    return `${user.avatar}${sep}token=${localStorage.getItem('portline_token')}`
-  })
+  const [avatarPreview, setAvatarPreview] = useState(() => buildAvatarUrl(user?.avatar))
 
-  const changingPassword = !!(editPassword || editPasswordConfirm)
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwSaved, setPwSaved] = useState(false)
 
   const handlePrefChange = (key, value) => {
     const updated = { ...prefs, [key]: value }
@@ -74,30 +74,11 @@ export default function SettingsPage() {
       return
     }
 
-    if (changingPassword) {
-      if (!currentPassword) {
-        setProfileError('Enter your current password to set a new one')
-        return
-      }
-      const pwError = validatePassword(editPassword)
-      if (pwError) {
-        setProfileError(pwError)
-        return
-      }
-      if (editPassword !== editPasswordConfirm) {
-        setProfileError('Passwords do not match')
-        return
-      }
-    }
-
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         method: 'PUT',
         headers: { ...getHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: editName.trim(),
-          ...(changingPassword ? { current_password: currentPassword, new_password: editPassword } : {}),
-        }),
+        body: JSON.stringify({ name: editName.trim() }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -111,10 +92,55 @@ export default function SettingsPage() {
       return
     }
 
-    setCurrentPassword('')
-    setEditPassword('')
-    setEditPasswordConfirm('')
     setProfileSaved(true)
+  }
+
+  const handlePasswordSave = async (e) => {
+    e.preventDefault()
+    setPwError('')
+    setPwSaved(false)
+
+    if (!currentPassword) {
+      setPwError('Enter your current password')
+      return
+    }
+    if (!newPassword) {
+      setPwError('Enter a new password')
+      return
+    }
+    if (newPassword.length < 8) {
+      setPwError('New password must be at least 8 characters')
+      return
+    }
+    if (newPassword === currentPassword) {
+      setPwError('New password must be different from current password')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('New password and confirmation do not match')
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        method: 'PUT',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setPwError(data.detail || 'Failed to change password')
+        return
+      }
+    } catch {
+      setPwError('Network error')
+      return
+    }
+
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setPwSaved(true)
   }
 
   const initials = editName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -124,7 +150,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" />
       <div className="flex-1 p-3 md:p-5 md:px-8 overflow-auto">
         <div className="max-w-2xl">
-          {/* Profile */}
+          {/* Profile + Preferences */}
           <form onSubmit={handleProfileSave} className="bg-white border border-border rounded-md p-4 md:p-6 mb-4">
             <h2 className="text-sm font-semibold text-text-primary mb-4">Profile</h2>
 
@@ -173,44 +199,40 @@ export default function SettingsPage() {
                 <div className="text-[11px] text-text-muted mt-1">Email cannot be changed</div>
               </div>
 
-              {/* Change password section */}
+              {/* Preferences */}
               <div className="border-t border-border-light pt-4 mt-1">
-                <h3 className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-3">Change Password</h3>
+                <h3 className="text-xs text-text-secondary uppercase tracking-wider font-medium mb-3">Preferences</h3>
                 <div className="flex flex-col gap-3">
-                  <div>
-                    <label className="text-xs text-text-muted block mb-1">Current Password</label>
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={e => setCurrentPassword(e.target.value)}
-                      placeholder="Required only to change password"
-                      className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <div>
-                      <label className="text-xs text-text-muted block mb-1">New Password</label>
-                      <input
-                        type="password"
-                        value={editPassword}
-                        onChange={e => setEditPassword(e.target.value)}
-                        placeholder="Min 6 chars, uppercase, number, special"
-                        className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
-                      />
+                      <div className="text-sm text-text-primary">Default date range</div>
+                      <div className="text-xs text-text-muted">Set the default period for the overview dashboard</div>
                     </div>
-                    <div>
-                      <label className="text-xs text-text-muted block mb-1">Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={editPasswordConfirm}
-                        onChange={e => setEditPasswordConfirm(e.target.value)}
-                        placeholder="Repeat new password"
-                        className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
-                      />
-                    </div>
+                    <select
+                      value={prefs.dateRange || 'last30'}
+                      onChange={e => handlePrefChange('dateRange', e.target.value)}
+                      className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2 text-sm text-[#555] outline-none cursor-pointer w-full sm:w-auto"
+                    >
+                      <option value="last30">Last 30 days</option>
+                      <option value="last7">Last 7 days</option>
+                      <option value="thisMonth">This month</option>
+                      <option value="all">All time</option>
+                    </select>
                   </div>
-                  <div className="text-[11px] text-text-muted">
-                    Leave password fields blank to keep your current password. Name and avatar changes don't require your password.
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <div>
+                      <div className="text-sm text-text-primary">Currency display</div>
+                      <div className="text-xs text-text-muted">Primary currency for summaries</div>
+                    </div>
+                    <select
+                      value={prefs.currencyDisplay || 'original'}
+                      onChange={e => handlePrefChange('currencyDisplay', e.target.value)}
+                      className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2 text-sm text-[#555] outline-none cursor-pointer w-full sm:w-auto"
+                    >
+                      <option value="original">Original currency</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -230,43 +252,56 @@ export default function SettingsPage() {
             </div>
           </form>
 
-          {/* Preferences */}
-          <div className="bg-white border border-border rounded-md p-4 md:p-6 mb-4">
-            <h2 className="text-sm font-semibold text-text-primary mb-4">Preferences</h2>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                <div>
-                  <div className="text-sm text-text-primary">Default date range</div>
-                  <div className="text-xs text-text-muted">Set the default period for the overview dashboard</div>
-                </div>
-                <select
-                  value={prefs.dateRange || 'last30'}
-                  onChange={e => handlePrefChange('dateRange', e.target.value)}
-                  className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2 text-sm text-[#555] outline-none cursor-pointer w-full sm:w-auto"
-                >
-                  <option value="last30">Last 30 days</option>
-                  <option value="last7">Last 7 days</option>
-                  <option value="thisMonth">This month</option>
-                  <option value="all">All time</option>
-                </select>
+          {/* Change Password — separate card */}
+          <form onSubmit={handlePasswordSave} className="bg-white border border-border rounded-md p-4 md:p-6 mb-4">
+            <h2 className="text-sm font-semibold text-text-primary mb-4">Change Password</h2>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs text-text-secondary uppercase tracking-wider font-medium block mb-1.5">Current Password</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => { setCurrentPassword(e.target.value); setPwError(''); setPwSaved(false) }}
+                  className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
+                />
               </div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-sm text-text-primary">Currency display</div>
-                  <div className="text-xs text-text-muted">Primary currency for summaries</div>
+                  <label className="text-xs text-text-secondary uppercase tracking-wider font-medium block mb-1.5">New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => { setNewPassword(e.target.value); setPwError(''); setPwSaved(false) }}
+                    placeholder="Min 8 characters"
+                    className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
+                  />
                 </div>
-                <select
-                  value={prefs.currencyDisplay || 'original'}
-                  onChange={e => handlePrefChange('currencyDisplay', e.target.value)}
-                  className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2 text-sm text-[#555] outline-none cursor-pointer w-full sm:w-auto"
-                >
-                  <option value="original">Original currency</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
+                <div>
+                  <label className="text-xs text-text-secondary uppercase tracking-wider font-medium block mb-1.5">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setPwError(''); setPwSaved(false) }}
+                    placeholder="Repeat new password"
+                    className="w-full bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-text-primary outline-none focus:border-accent/40"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+
+            {pwError && (
+              <div className="mt-3 text-sm text-signal bg-signal-light px-3 py-2 rounded-sm">{pwError}</div>
+            )}
+            {pwSaved && (
+              <div className="mt-3 text-sm text-ok bg-ok-light px-3 py-2 rounded-sm">Password changed successfully.</div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <button type="submit" className="bg-accent text-white px-5 py-2 rounded text-sm font-medium cursor-pointer hover:bg-[#e55a25] transition-colors">
+                Change Password
+              </button>
+            </div>
+          </form>
 
           {/* ERP Connection */}
           <div className="bg-white border border-border rounded-md p-4 md:p-6">

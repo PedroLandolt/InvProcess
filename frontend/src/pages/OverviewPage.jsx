@@ -23,17 +23,20 @@ export default function OverviewPage() {
   const vendors = useMemo(() => [...new Set(invoices.map(i => i.vendorName))].sort(), [invoices])
   const currencies = useMemo(() => [...new Set(invoices.map(i => i.currency))].sort(), [invoices])
 
-  // Date-only filtered (for flagged vendors in stats)
+  // Date + vendor + currency filtered (for stats panel)
   const dateFiltered = useMemo(() => {
-    if (!filters.dateRange) return invoices
     return invoices.filter(inv => {
-      const uploaded = inv.uploadedAt?.split('T')[0]
-      if (!uploaded) return false
-      if (filters.dateRange.start && uploaded < filters.dateRange.start) return false
-      if (filters.dateRange.end && uploaded > filters.dateRange.end) return false
+      if (filters.dateRange) {
+        const uploaded = inv.uploadedAt?.substring(0, 10)
+        if (!uploaded) return false
+        if (filters.dateRange.start && uploaded < filters.dateRange.start) return false
+        if (filters.dateRange.end && uploaded > filters.dateRange.end) return false
+      }
+      if (filters.vendor && inv.vendorName !== filters.vendor) return false
+      if (filters.currency && inv.currency !== filters.currency) return false
       return true
     })
-  }, [invoices, filters.dateRange])
+  }, [invoices, filters.dateRange, filters.vendor, filters.currency])
 
   const filtered = useMemo(() => {
     return invoices.filter(inv => {
@@ -49,7 +52,7 @@ export default function OverviewPage() {
       if (filters.vendor && inv.vendorName !== filters.vendor) return false
       if (filters.currency && inv.currency !== filters.currency) return false
       if (filters.dateRange) {
-        const uploaded = inv.uploadedAt?.split('T')[0]
+        const uploaded = inv.uploadedAt?.substring(0, 10)
         if (!uploaded) return false
         if (filters.dateRange.start && uploaded < filters.dateRange.start) return false
         if (filters.dateRange.end && uploaded > filters.dateRange.end) return false
@@ -204,9 +207,16 @@ function DetailContent({ invoice, onSubmitERP, onViewPdf }) {
               <div className="text-base font-semibold text-text-primary">{invoice.vendorName}</div>
               <div className="text-sm text-text-secondary mt-1">Tax ID: {invoice.vendorTaxId || 'Not found'}</div>
               {invoice.uploadedAt && (
-                <div className="text-xs text-text-muted mt-1">
-                  Uploaded {new Date(invoice.uploadedAt + 'Z').toLocaleString()}
-                  {invoice.uploadedBy && <> by <span className="font-medium text-text-secondary">{invoice.uploadedBy}</span></>}
+                <div className="flex items-center gap-1.5 text-xs text-text-muted mt-1">
+                  {invoice.uploadedBy && (
+                    <div className="w-5 h-5 bg-[#555] rounded-full flex items-center justify-center text-[9px] text-[#bbb] font-semibold shrink-0">
+                      {invoice.uploadedBy.split(' ').map(n => n[0]).join('')}
+                    </div>
+                  )}
+                  <span>
+                    Uploaded {new Date(invoice.uploadedAt.replace(' ', 'T') + 'Z').toLocaleString()}
+                    {invoice.uploadedBy && <> by <span className="font-medium text-text-secondary">{invoice.uploadedBy}</span></>}
+                  </span>
                 </div>
               )}
             </div>

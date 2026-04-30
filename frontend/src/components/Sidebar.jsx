@@ -1,8 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { API_BASE } from '../services/api'
+
+function buildAvatarUrl(avatar) {
+  if (!avatar) return null
+  if (avatar.startsWith('http')) return avatar
+  const sep = avatar.includes('?') ? '&' : '?'
+  return `${API_BASE}${avatar}${sep}token=${localStorage.getItem('portline_token')}`
+}
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth()
+  const avatarUrl = buildAvatarUrl(user?.avatar)
   const navigate = useNavigate()
   const isManager = user?.role === 'manager' || user?.role === 'admin'
 
@@ -62,8 +71,8 @@ export default function Sidebar({ open, onClose }) {
       <div className="mt-auto px-5 py-4 border-t border-[#444]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {user?.avatar ? (
-              <img src={user.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
             ) : (
               <div className="w-8 h-8 bg-[#555] rounded-full flex items-center justify-center text-xs text-[#bbb] font-semibold">
                 {user?.initials}

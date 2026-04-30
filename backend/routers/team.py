@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, field_validator
 from services.auth import (
-    require_role, hash_password, create_invite_token,
+    require_role, get_current_user, hash_password, create_invite_token,
     sanitize_string, validate_email,
 )
 from services.database import get_all_users, get_user_by_email, create_user, update_user
@@ -33,7 +33,7 @@ class CreateAnalystRequest(BaseModel):
 
 
 @router.get("")
-def list_team(user: dict = Depends(require_role("manager"))):
+def list_team(user: dict = Depends(get_current_user)):
     users = get_all_users()
     result = []
     for u in users:

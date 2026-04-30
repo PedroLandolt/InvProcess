@@ -23,8 +23,8 @@ function getDefaultDateRange() {
   const prefs = JSON.parse(localStorage.getItem('portline_prefs') || '{}')
   const preset = prefs.dateRange || 'last30'
   const now = new Date()
-  const today = now.toISOString().split('T')[0]
-  const d = (n) => { const x = new Date(now); x.setDate(x.getDate() + n); return x.toISOString().split('T')[0] }
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const d = (n) => { const x = new Date(now); x.setDate(x.getDate() + n); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}` }
   if (preset === 'all') return null
   if (preset === 'last7') return { start: d(-6), end: today }
   if (preset === 'thisMonth') return { start: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`, end: today }
@@ -57,13 +57,12 @@ export default function FilterBar({ vendors, currencies, onFilterChange, onReset
   }
 
   const handleReset = () => {
-    const defaultRange = getDefaultDateRange()
     setSearch('')
     setVendor('')
     setCurrency('')
-    setDateRange(defaultRange)
-    try { localStorage.setItem('portline_dateRange', dateRangeToISO(defaultRange)) } catch {}
-    onFilterChange({ search: '', vendor: '', currency: '', dateRange: defaultRange })
+    setDateRange(null)
+    try { localStorage.setItem('portline_dateRange', 'all') } catch {}
+    onFilterChange({ search: '', vendor: '', currency: '', dateRange: null })
     onResetFilters?.()
   }
 
@@ -71,10 +70,10 @@ export default function FilterBar({ vendors, currencies, onFilterChange, onReset
     <div className="px-4 md:px-8 py-3 bg-white border-b border-border-light flex flex-wrap gap-2 md:gap-3 items-center shrink-0 min-h-[50px]">
       <input
         type="text"
-        placeholder="⌕  Search vendor, invoice #, invoice ID..."
+        placeholder="Search"
         value={search}
         onChange={e => handleChange('search', e.target.value)}
-        className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-[#555] w-full sm:w-auto sm:min-w-[280px] outline-none focus:border-accent/40"
+        className="bg-[#f5f5f5] border border-[#e0e0e0] rounded px-3 py-2.5 text-sm text-[#555] w-full sm:w-auto sm:min-w-[200px] sm:flex-1 max-w-[360px] outline-none focus:border-accent/40"
       />
       <select
         value={vendor}

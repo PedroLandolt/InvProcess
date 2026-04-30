@@ -76,6 +76,7 @@ def login(body: LoginRequest):
             "initials": user["initials"],
             "email": user["email"],
             "role": user["role"],
+            "avatar": f"/api/auth/avatar/{user['id']}" if user.get("avatar") else None,
         },
     }
 
@@ -116,6 +117,8 @@ def update_profile(body: UpdateProfileRequest, user: dict = Depends(get_current_
             raise HTTPException(status_code=400, detail="Current password is incorrect")
         if len(body.new_password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        if verify_password(body.new_password, db_user["password_hash"]):
+            raise HTTPException(status_code=400, detail="New password must be different from current password")
         updates["password_hash"] = hash_password(body.new_password)
     if not updates:
         raise HTTPException(status_code=400, detail="No changes to apply")

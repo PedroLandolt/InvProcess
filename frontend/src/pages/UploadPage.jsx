@@ -11,17 +11,19 @@ function loadUploadHistory() {
 
 function saveUploadHistory(uploads) {
   try {
-    localStorage.setItem('portline_uploads', JSON.stringify(uploads.slice(0, 50)))
+    localStorage.setItem('portline_uploads', JSON.stringify(uploads.slice(0, 20)))
   } catch {}
 }
 
 export default function UploadPage() {
-  const { user } = useAuth()
+  const { user, isManager } = useAuth()
   const [pending, setPending] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [uploads, setUploads] = useState(loadUploadHistory)
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef()
+
+  const visibleUploads = isManager ? uploads : uploads.filter(u => u.uploadedBy === user?.name)
 
   const addFiles = (fileList) => {
     const pdfs = Array.from(fileList).filter(f => f.type === 'application/pdf')
@@ -50,36 +52,24 @@ export default function UploadPage() {
     setPending(prev => prev.map(p => ({ ...p, processing: true })))
 
     for (const item of toProcess) {
+      const entry = {
+        id: item.id,
+        fileName: item.file.name,
+        size: item.file.size,
+        uploadedBy: user?.name || 'Unknown',
+        uploadedAt: now,
+        status: 'failed',
+      }
       try {
         const result = await uploadInvoice(item.file)
-        setPending(prev => prev.filter(p => p.id !== item.id))
-        setUploads(prev => {
-          const updated = [{
-            id: item.id,
-            fileName: item.file.name,
-            size: item.file.size,
-            uploadedBy: user?.name || 'Unknown',
-            uploadedAt: now,
-            status: result.success ? 'processed' : 'failed',
-          }, ...prev]
-          saveUploadHistory(updated)
-          return updated
-        })
-      } catch {
-        setPending(prev => prev.filter(p => p.id !== item.id))
-        setUploads(prev => {
-          const updated = [{
-            id: item.id,
-            fileName: item.file.name,
-            size: item.file.size,
-            uploadedBy: user?.name || 'Unknown',
-            uploadedAt: now,
-            status: 'failed',
-          }, ...prev]
-          saveUploadHistory(updated)
-          return updated
-        })
-      }
+        entry.status = result.success ? 'processed' : 'failed'
+      } catch {}
+      // Save directly to localStorage so it persists even if component unmounts
+      const current = loadUploadHistory()
+      const updated = [entry, ...current]
+      saveUploadHistory(updated)
+      setUploads(updated)
+      setPending(prev => prev.filter(p => p.id !== item.id))
     }
     setUploading(false)
   }
@@ -166,11 +156,11 @@ export default function UploadPage() {
           )}
 
           {/* Upload history */}
-          {uploads.length > 0 && (
+          {visibleUploads.length > 0 && (
             <div className="mt-6">
               <div className="text-xs text-text-muted uppercase tracking-wider mb-2">Recent Uploads</div>
               <div className="flex flex-col gap-1.5">
-                {uploads.map(u => (
+                {visibleUploads.map(u => (
                   <div key={u.id} className="bg-white border border-border rounded-md p-3 flex items-center gap-3">
                     <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${u.status === 'processed' ? 'bg-ok-light' : 'bg-signal-light'}`}>
                       {u.status === 'processed' ? (
